@@ -188,38 +188,14 @@ retry_docker_load() {
         local file_size_mb=$(echo "scale=2; $file_size / 1048576" | bc)
         echo "镜像大小: ${file_size_mb} MB"
         
-        # 检查pv命令是否可用
-        if command -v pv >/dev/null 2>&1; then
-            echo "使用pv显示进度..."
-            echo "注意：当pv显示100%时，docker load可能仍在处理镜像，请耐心等待..."
-            
-            # 使用pv显示进度，然后使用docker load加载镜像
-            if pv --force -s "$file_size" "$image_file" | docker load >/dev/null 2>&1; then
-                echo "成功加载$image_name镜像！"
-                return 0
-            fi
-        else
-            # pv不可用，使用进度点
-            echo "未找到pv命令，使用进度点..."
-            
-            # 启动一个后台进程显示进度点
-            local progress_pid
-            (while true; do sleep 5; echo -n "."; done) &
-            progress_pid=$!
-            
-            # 减少输出以防止SSH连接重置
-            docker load -i "$image_file" >/dev/null 2>&1
-            local exit_status=$?
-            
-            # 杀死进度点进程
-            kill $progress_pid >/dev/null 2>&1
-            wait $progress_pid 2>/dev/null
-            echo ""
-            
-            if [ $exit_status -eq 0 ]; then
-                echo "成功加载$image_name镜像！"
-                return 0
-            fi
+        # 显示加载镜像的详细进度
+        echo "正在加载镜像，显示详细进度..."
+        echo "镜像层加载过程中会显示每个层的ID和状态，这是正常现象..."
+        
+        # 使用docker load直接加载镜像，显示详细输出
+        if docker load -i "$image_file"; then
+            echo "成功加载$image_name镜像！"
+            return 0
         fi
         
         retry_count=$((retry_count + 1))
