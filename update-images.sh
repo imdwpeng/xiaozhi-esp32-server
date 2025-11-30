@@ -188,10 +188,6 @@ retry_docker_load() {
         local file_size_mb=$(echo "scale=2; $file_size / 1048576" | bc)
         echo "镜像大小: ${file_size_mb} MB"
         
-        # 显示加载镜像的详细进度
-        echo "正在加载镜像，显示详细进度..."
-        echo "镜像层加载过程中会显示每个层的ID和状态，这是正常现象..."
-        
         # 使用docker load直接加载镜像，显示详细输出
         if docker load -i "$image_file"; then
             echo "成功加载$image_name镜像！"
