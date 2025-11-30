@@ -247,11 +247,11 @@ if [ ! -f /opt/xiaozhi-server/docker-compose_all.yml ]; then
 fi
 
 # 显示配置文件中的镜像配置，用于调试
-echo "配置文件中的镜像配置："
-grep -A 5 "image:" /opt/xiaozhi-server/docker-compose_all.yml
+    echo "配置文件中的镜像配置："
+    grep -A 5 "image:" /opt/xiaozhi-server/docker-compose_all.yml
 
-# 启动服务
-$DOCKER_COMPOSE_CMD -f /opt/xiaozhi-server/docker-compose_all.yml up -d
+    # 启动服务
+    $DOCKER_COMPOSE_CMD -f /opt/xiaozhi-server/docker-compose_all.yml up -d
 
 if [ $? -ne 0 ]; then
     echo "Docker服务启动失败，请检查日志"
