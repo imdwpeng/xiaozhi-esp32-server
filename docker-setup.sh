@@ -39,11 +39,11 @@ echo -e "\e[1;32m"  # 设置颜色为亮绿色
 cat << "EOF"
 脚本作者：@Bilibili 香草味的纳西妲喵
  __      __            _  _  _            _   _         _      _      _        
- \ \    / /           (_)| || |          | \ | |       | |    (_)    | |       
+ \ \    / /           (_)| || |          | \ | |       | |    (_)    | |        
   \ \  / /__ _  _ __   _ | || |  __ _    |  \| |  __ _ | |__   _   __| |  __ _ 
    \ \/ // _` || '_ \ | || || | / _` |   | . ` | / _` || '_ \ | | / _` | / _` |
     \  /| (_| || | | || || || || (_| |   | |\  || (_| || | | || || (_| || (_| |
-     \/  \__,_||_| |_||_||_||_| \__,_|   |_| \_| \__,_||_| |_||_| \__,_| \__,_|                                                                                                                                                                                                                               
+     \/  \__,_||_| |_||_||_||_| \__,_|   |_| \_| \__,_||_| |_||_| \__,_| \__,_|                                                                                                                               
 EOF
 echo -e "\e[0m"  # 重置颜色
 echo -e "\e[1;36m  小智服务端全量部署一键安装脚本 Ver 0.2 2025年8月20日更新 \e[0m\n"
@@ -106,6 +106,38 @@ check_and_download() {
         echo "${filepath}文件已存在，跳过下载"
     fi
 }
+
+# 检查curl安装
+if ! command -v curl &> /dev/null; then
+    echo "------------------------------------------------------------"
+    echo "未检测到curl，正在安装..."
+    apt update
+    apt install -y curl
+else
+    echo "------------------------------------------------------------"
+    echo "curl已安装，跳过安装步骤"
+fi
+
+# 检测docker compose命令形式（支持docker-compose和docker compose两种形式）
+if command -v docker-compose >/dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD="docker-compose"
+elif command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD="docker compose"
+else
+    # 如果都没有检测到，先尝试安装docker-compose
+    echo "------------------------------------------------------------"
+    echo "未检测到docker-compose，正在安装..."
+    apt update
+    apt install -y docker-compose
+    if command -v docker-compose >/dev/null 2>&1; then
+        DOCKER_COMPOSE_CMD="docker-compose"
+    else
+        whiptail --title "错误" --msgbox "无法安装或检测到docker-compose命令！" 10 50
+        exit 1
+    fi
+fi
+
+echo "使用Docker Compose命令形式: $DOCKER_COMPOSE_CMD"
 
 # 检查是否已安装
 check_installed() {
@@ -196,39 +228,6 @@ if check_installed; then
           # 跳过升级，继续执行后续安装流程
     fi
 fi
-
-
-# 检查curl安装
-if ! command -v curl &> /dev/null; then
-    echo "------------------------------------------------------------"
-    echo "未检测到curl，正在安装..."
-    apt update
-    apt install -y curl
-else
-    echo "------------------------------------------------------------"
-    echo "curl已安装，跳过安装步骤"
-fi
-
-# 检测docker compose命令形式（支持docker-compose和docker compose两种形式）
-if command -v docker-compose >/dev/null 2>&1; then
-    DOCKER_COMPOSE_CMD="docker-compose"
-elif command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
-    DOCKER_COMPOSE_CMD="docker compose"
-else
-    # 如果都没有检测到，先尝试安装docker-compose
-    echo "------------------------------------------------------------"
-    echo "未检测到docker-compose，正在安装..."
-    apt update
-    apt install -y docker-compose
-    if command -v docker-compose >/dev/null 2>&1; then
-        DOCKER_COMPOSE_CMD="docker-compose"
-    else
-        whiptail --title "错误" --msgbox "无法安装或检测到docker-compose命令！" 10 50
-        exit 1
-    fi
-fi
-
-echo "使用Docker Compose命令形式: $DOCKER_COMPOSE_CMD"
 
 # 检查Docker安装
 if ! command -v docker &> /dev/null; then
@@ -368,33 +367,33 @@ fi
 
 # 启动Docker服务
 (
-echo "------------------------------------------------------------"
-echo "正在拉取Docker镜像..."
-echo "这可能需要几分钟时间，请耐心等待"
-$DOCKER_COMPOSE_CMD -f /opt/xiaozhi-server/docker-compose_all.yml up -d
-
-if [ $? -ne 0 ]; then
-    whiptail --title "错误" --msgbox "Docker服务启动失败，请尝试更换镜像源后重新执行本脚本" 10 60
-    exit 1
-fi
-
-echo "------------------------------------------------------------"
-echo "正在检查服务启动状态..."
-TIMEOUT=300
-START_TIME=$(date +%s)
-while true; do
-    CURRENT_TIME=$(date +%s)
-    if [ $((CURRENT_TIME - START_TIME)) -gt $TIMEOUT ]; then
-        whiptail --title "错误" --msgbox "服务启动超时，未在指定时间内找到预期日志内容" 10 60
+    echo "------------------------------------------------------------"
+    echo "正在拉取Docker镜像..."
+    echo "这可能需要几分钟时间，请耐心等待"
+    $DOCKER_COMPOSE_CMD -f /opt/xiaozhi-server/docker-compose_all.yml up -d
+    
+    if [ $? -ne 0 ]; then
+        whiptail --title "错误" --msgbox "Docker服务启动失败，请尝试更换镜像源后重新执行本脚本" 10 60
         exit 1
     fi
     
-    if docker logs xiaozhi-esp32-server-web 2>&1 | grep -q "Started AdminApplication in"; then
-        break
-    fi
-    sleep 1
-done
-
+    echo "------------------------------------------------------------"
+    echo "正在检查服务启动状态..."
+    TIMEOUT=300
+    START_TIME=$(date +%s)
+    while true; do
+        CURRENT_TIME=$(date +%s)
+        if [ $((CURRENT_TIME - START_TIME)) -gt $TIMEOUT ]; then
+            whiptail --title "错误" --msgbox "服务启动超时，未在指定时间内找到预期日志内容" 10 60
+            exit 1
+        fi
+        
+        if docker logs xiaozhi-esp32-server-web 2>&1 | grep -q "Started AdminApplication in"; then
+            break
+        fi
+        sleep 1
+    done
+    
     echo "服务端启动成功！正在完成配置..."
     echo "正在启动服务..."
     $DOCKER_COMPOSE_CMD -f /opt/xiaozhi-server/docker-compose_all.yml up -d
@@ -431,4 +430,4 @@ whiptail --title "安装完成！" --msgbox "\
 OTA 地址: http://$LOCAL_IP:8002/xiaozhi/ota/\n\
 视觉分析接口地址: http://$LOCAL_IP:8003/mcp/vision/explain\n\
 WebSocket 地址: ws://$LOCAL_IP:8000/xiaozhi/v1/\n\
-\n安装完毕！感谢您的使用！\n按Enter键退出..." 16 70
+安装完毕！感谢您的使用！\n按Enter键退出..." 16 70
