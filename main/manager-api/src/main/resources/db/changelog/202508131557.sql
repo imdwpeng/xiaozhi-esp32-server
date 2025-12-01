@@ -16,7 +16,7 @@ UPDATE `ai_model_config` SET
 `doc_link` = 'https://github.com/PaddlePaddle/PaddleSpeech',
 `remark` = 'PaddleSpeechTTS 配置说明：
 1. PaddleSpeech 是百度飞桨开源的语音合成工具，支持本地离线部署和模型训练。paddlepaddle百度飞浆框架地址：https://www.paddlepaddle.org.cn/
-2. 支持 WebSocket 和 HTTP 协议，默认使用 WebSocket 进行流式传输（参考部署文档：https://github.com/xinnan-tech/xiaozhi-esp32-server/blob/main/docs/paddlespeech-deploy.md）。
+2. 支持 WebSocket 和 HTTP 协议，默认使用 WebSocket 进行流式传输（参考部署文档：https://github.com/imdwpeng/xiaozhi-esp32-server/blob/main/docs/paddlespeech-deploy.md）。
 3. 使用前要在本地部署 paddlespeech 服务，服务默认运行在 ws://127.0.0.1:8092/paddlespeech/tts/streaming
 4. 支持自定义发音人、语速、音量和采样率。
 ' WHERE `id` = 'TTS_PaddleSpeechTTS';

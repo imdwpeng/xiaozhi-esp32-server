@@ -154,8 +154,8 @@ done
 images=(
     "xiaozhi-esp32-server:server_latest"
     "xiaozhi-esp32-server:web_latest"
-    "ghcr.nju.edu.cn/xinnan-tech/xiaozhi-esp32-server:server_latest"
-    "ghcr.nju.edu.cn/xinnan-tech/xiaozhi-esp32-server:web_latest"
+    "ghcr.nju.edu.cn/imdwpeng/xiaozhi-esp32-server:server_latest"
+    "ghcr.nju.edu.cn/imdwpeng/xiaozhi-esp32-server:web_latest"
 )
 
 for image in "${images[@]}"; do

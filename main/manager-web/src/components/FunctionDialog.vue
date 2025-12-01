@@ -116,9 +116,9 @@
           <div class="url-header">
             <div class="address-desc">
               <span>{{ $t('functionDialog.mcpAddressDesc') }}</span>
-              <a href="https://github.com/xinnan-tech/xiaozhi-esp32-server/blob/main/docs/mcp-endpoint-enable.md"
+              <a href="https://github.com/imdwpeng/xiaozhi-esp32-server/blob/main/docs/mcp-endpoint-enable.md"
                 target="_blank" class="doc-link">{{ $t('functionDialog.howToDeployMcp') }}</a> &nbsp;&nbsp;|&nbsp;&nbsp;
-              <a href="https://github.com/xinnan-tech/xiaozhi-esp32-server/blob/main/docs/mcp-endpoint-integration.md"
+              <a href="https://github.com/imdwpeng/xiaozhi-esp32-server/blob/main/docs/mcp-endpoint-integration.md"
                 target="_blank" class="doc-link">{{ $t('functionDialog.howToIntegrateMcp') }}</a> &nbsp;
             </div>
           </div>
