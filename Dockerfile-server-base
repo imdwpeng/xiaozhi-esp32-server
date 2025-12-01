@@ -22,7 +22,7 @@ ENV LANG=zh_CN.UTF-8 \
     LANGUAGE=zh_CN:zh \
     PYTHONIOENCODING=utf-8
 
-WORKDIR /opt/xiaozhi-esp32-server
+WORKDIR /opt/xiaozhi-server
 
 # 复制requirements.txt
 COPY main/xiaozhi-server/requirements.txt .
