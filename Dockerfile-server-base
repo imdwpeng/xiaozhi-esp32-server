@@ -16,7 +16,6 @@ RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/ && \
     pip config set global.timeout 120 && \
     pip config set install.retries 5
 
-
 # 设置环境变量以确保正确的字符编码
 ENV LANG=zh_CN.UTF-8 \
     LC_ALL=zh_CN.UTF-8 \
