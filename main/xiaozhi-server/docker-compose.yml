@@ -17,6 +17,6 @@ services:
       - "8003:8003"
     volumes:
       # 配置文件目录
-      - ./data:/opt/xiaozhi-server/data
+      - ./data:/opt/xiaozhi-esp32-server/data
       # 模型文件挂接，很重要
-      - ./models/SenseVoiceSmall:/opt/xiaozhi-server/models/SenseVoiceSmall
+      - ./models/SenseVoiceSmall/model.pt:/opt/xiaozhi-esp32-server/models/SenseVoiceSmall/model.pt
