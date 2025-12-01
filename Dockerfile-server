@@ -1,5 +1,5 @@
 # 生产镜像，仅包含应用代码
-FROM xiaozhi-esp32-server:server-base
+FROM ghcr.io/imdwpeng/xiaozhi-esp32-server:server-base
 
 COPY main/xiaozhi-server .
 
