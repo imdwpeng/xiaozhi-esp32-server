@@ -410,7 +410,7 @@ public class ConfigServiceImpl implements ConfigService {
                     if (Constant.VOICE_CLONE_HUOSHAN_DOUBLE_STREAM.equals(map.get("type"))) {
                         // 如果voice是”S_“开头的，使用seed-icl-1.0
                         if (voice != null && voice.startsWith("S_")) {
-                            map.put("resource_id", "seed-icl-1.0");
+                            map.put("resource_id", "seed-icl-2.0");
                         }
                     }
                 }
