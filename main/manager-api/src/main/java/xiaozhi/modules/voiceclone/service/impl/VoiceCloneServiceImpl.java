@@ -322,7 +322,7 @@ public class VoiceCloneServiceImpl extends BaseServiceImpl<VoiceCloneDao, VoiceC
         reqBody.put("audios", audios);
         reqBody.put("source", 2);
         reqBody.put("language", 0);
-        reqBody.put("model_type", 4);
+        reqBody.put("model_type", 1);
         reqBody.put("speaker_id", entity.getVoiceId());
 
         String apiUrl = "https://openspeech.bytedance.com/api/v1/mega_tts/audio/upload";
@@ -332,7 +332,7 @@ public class VoiceCloneServiceImpl extends BaseServiceImpl<VoiceCloneDao, VoiceC
                 .uri(URI.create(apiUrl))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer;" + accessToken)
-                .header("Resource-Id", "seed-icl-2.0")
+                .header("Resource-Id", "seed-icl-1.0")
                 .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(reqBody)))
                 .build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
