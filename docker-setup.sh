@@ -1,7 +1,4 @@
-#!/bin/sh
-# 脚本作者@VanillaNahida
-# 本文件是用于一键自动下载本项目所需文件，自动创建好目录
-# 暂且只支持X86版本的Ubuntu系统，其他系统未测试
+#!/bin/bash
 
 # 定义中断处理函数
 handle_interrupt() {
@@ -46,7 +43,7 @@ cat << "EOF"
      \/  \__,_||_| |_||_||_||_| \__,_|   |_| \_| \__,_||_| |_||_| \__,_| \__,_|                                                                                                                                                                                                                               
 EOF
 echo -e "\e[0m"  # 重置颜色
-echo -e "\e[1;36m  小智服务端全量部署一键安装脚本 Ver 0.2 2025年8月20日更新 \e[0m\n"
+echo -e "\e[1;36m  小智服务端全量部署一键安装脚本 Ver 0.2 2025年11月16日更新 \e[0m\n"
 sleep 1
 
 
@@ -107,6 +104,89 @@ check_and_download() {
     fi
 }
 
+# 执行docker compose命令的函数，优先使用docker compose，失败时回退到docker-compose
+docker_compose() {
+    local cmd="docker compose $@"
+    local fallback_cmd="docker-compose $@"
+    
+    echo "尝试执行: $cmd"
+    # 尝试使用docker compose命令
+    if $cmd; then
+        echo "docker compose命令执行成功"
+        return 0
+    else
+        echo "docker compose命令执行失败，尝试回退到docker-compose"
+        # 回退到docker-compose命令
+        if $fallback_cmd; then
+            echo "docker-compose命令执行成功"
+            return 0
+        else
+            echo "docker-compose命令执行失败"
+            return 1
+        fi
+    fi
+}
+
+# 从多个接口获取公网IP地址的函数，实现轮流查询机制
+get_public_ip() {
+    # 定义IP查询接口列表
+    local ip_services=(
+        "https://myip.ipip.net"
+        "https://ddns.oray.com/checkip"
+        "https://ip.3322.net"
+        "https://4.ipw.cn"
+        "https://v4.yinghualuo.cn/bejson"
+    )
+    
+    # 尝试每个服务，直到成功获取IP
+    for service in "${ip_services[@]}"; do        
+        # 使用curl获取响应，设置超时时间为5秒
+        local response
+        response=$(curl -s -m 5 "$service" 2>/dev/null)
+        
+        # 检查curl是否成功执行
+        if [ $? -eq 0 ] && [ -n "$response" ]; then
+            # 尝试从响应中提取IPv4地址
+            local ip
+            
+            # 根据不同服务的响应格式提取IP
+            case "$service" in
+                "https://myip.ipip.net")
+                    # 格式示例: 当前 IP：192.168.1.1  来自于：中国 北京 北京 联通
+                    ip=$(echo "$response" | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1)
+                    ;;
+                "https://ddns.oray.com/checkip")
+                    # 格式示例: Current IP Address: 192.168.1.1
+                    ip=$(echo "$response" | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1)
+                    ;;
+                "https://ip.3322.net")
+                    # 格式示例: 192.168.1.1
+                    ip=$(echo "$response" | grep -oE '^([0-9]{1,3}\.){3}[0-9]{1,3}$' | head -1)
+                    ;;
+                "https://4.ipw.cn")
+                    # 格式示例: 192.168.1.1
+                    ip=$(echo "$response" | grep -oE '^([0-9]{1,3}\.){3}[0-9]{1,3}$' | head -1)
+                    ;;
+                "https://v4.yinghualuo.cn/bejson")
+                    # 格式示例: {"is_ipv6":false,"ip":"192.168.1.1","location":"..."}
+                    ip=$(echo "$response" | grep -oE '"ip":"([0-9]{1,3}\.){3}[0-9]{1,3}"' | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1)
+                    ;;
+            esac
+            
+            # 验证提取到的是否为有效的IPv4地址
+            if [[ "$ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+                echo "$ip"
+                return 0
+            fi
+        fi
+    done
+    
+    # 如果所有服务都失败，回退到本地IP
+    local local_ip=$(hostname -I | awk '{print $1}')
+    echo "$local_ip"
+    return 1
+}
+
 # 检查是否已安装
 check_installed() {
     # 检查目录是否存在且非空
@@ -138,7 +218,7 @@ if check_installed; then
         echo "开始升级操作..."
         
         # 停止并移除所有docker-compose服务
-        docker compose -f /opt/xiaozhi-server/docker-compose_all.yml down
+        docker_compose -f /opt/xiaozhi-server/docker-compose_all.yml down
         
         # 停止并删除特定容器（考虑容器可能不存在的情况）
         containers=(
@@ -190,7 +270,7 @@ if check_installed; then
         echo "开始启动最新版本服务..."
         # 升级完成后标记，跳过后续下载步骤
         UPGRADE_COMPLETED=1
-        docker compose -f /opt/xiaozhi-server/docker-compose_all.yml up -d
+        docker_compose -f /opt/xiaozhi-server/docker-compose_all.yml up -d
     else
           whiptail --title "跳过升级" --msgbox "已取消升级，将继续使用当前版本。" 10 50
           # 跳过升级，继续执行后续安装流程
@@ -257,14 +337,15 @@ fi
 
 # Docker镜像源配置
 MIRROR_OPTIONS=(
-    "1" "轩辕镜像 (推荐)"
-    "2" "腾讯云镜像源"
-    "3" "中科大镜像源"
-    "4" "网易163镜像源"
-    "5" "华为云镜像源"
-    "6" "阿里云镜像源"
-    "7" "自定义镜像源"
-    "8" "跳过配置"
+    "1" "轩辕镜像"
+    "2" "毫秒镜像"
+    "3" "腾讯云镜像源"
+    "4" "中科大镜像源"
+    "5" "网易163镜像源"
+    "6" "华为云镜像源"
+    "7" "阿里云镜像源"
+    "8" "自定义镜像源"
+    "9" "跳过配置"
 )
 
 MIRROR_CHOICE=$(whiptail --title "选择Docker镜像源" --menu "请选择要使用的Docker镜像源" 20 60 10 \
@@ -275,13 +356,14 @@ MIRROR_CHOICE=$(whiptail --title "选择Docker镜像源" --menu "请选择要使
 
 case $MIRROR_CHOICE in
     1) MIRROR_URL="https://docker.xuanyuan.me" ;; 
-    2) MIRROR_URL="https://mirror.ccs.tencentyun.com" ;; 
-    3) MIRROR_URL="https://docker.mirrors.ustc.edu.cn" ;; 
-    4) MIRROR_URL="https://hub-mirror.c.163.com" ;; 
-    5) MIRROR_URL="https://05f073ad3c0010ea0f4bc00b7105ec20.mirror.swr.myhuaweicloud.com" ;; 
-    6) MIRROR_URL="https://registry.aliyuncs.com" ;; 
-    7) MIRROR_URL=$(whiptail --title "自定义镜像源" --inputbox "请输入完整的镜像源URL:" 10 60 3>&1 1>&2 2>&3) ;; 
-    8) MIRROR_URL="" ;; 
+    2) MIRROR_URL="https://docker.1ms.run" ;; 
+    3) MIRROR_URL="https://mirror.ccs.tencentyun.com" ;; 
+    4) MIRROR_URL="https://docker.mirrors.ustc.edu.cn" ;; 
+    5) MIRROR_URL="https://hub-mirror.c.163.com" ;; 
+    6) MIRROR_URL="https://05f073ad3c0010ea0f4bc00b7105ec20.mirror.swr.myhuaweicloud.com" ;; 
+    7) MIRROR_URL="https://registry.aliyuncs.com" ;; 
+    8) MIRROR_URL=$(whiptail --title "自定义镜像源" --inputbox "请输入完整的镜像源URL:\n例如: https://docker.example.com" 10 60 3>&1 1>&2 2>&3) ;; 
+    9) MIRROR_URL="" ;; 
 esac
 
 if [ -n "$MIRROR_URL" ]; then
@@ -328,7 +410,7 @@ if [ ! -f "$MODEL_PATH" ]; then
     (
     for i in {1..20}; do
         echo $((i*5))
-        sleep 0.5
+        sleep 0.1
     done
     ) | whiptail --title "下载中" --gauge "开始下载语音识别模型..." 10 60 0
     curl -fL --progress-bar https://modelscope.cn/models/iic/SenseVoiceSmall/resolve/master/model.pt -o "$MODEL_PATH" || {
@@ -350,7 +432,7 @@ fi
 echo "------------------------------------------------------------"
 echo "正在拉取Docker镜像..."
 echo "这可能需要几分钟时间，请耐心等待"
-docker compose -f /opt/xiaozhi-server/docker-compose_all.yml up -d
+docker_compose -f /opt/xiaozhi-server/docker-compose_all.yml up -d
 
 if [ $? -ne 0 ]; then
     whiptail --title "错误" --msgbox "Docker服务启动失败，请尝试更换镜像源后重新执行本脚本" 10 60
@@ -376,16 +458,26 @@ done
 
     echo "服务端启动成功！正在完成配置..."
     echo "正在启动服务..."
-    docker compose -f /opt/xiaozhi-server/docker-compose_all.yml up -d
+    docker_compose -f /opt/xiaozhi-server/docker-compose_all.yml up -d
     echo "服务启动完成！"
 )
 
 # 密钥配置
 
 # 获取服务器公网地址
-PUBLIC_IP=$(hostname -I | awk '{print $1}')
-whiptail --title "配置服务器密钥" --msgbox "请使用浏览器，访问下方链接，打开智控台并注册账号: \n\n内网地址：http://127.0.0.1:8002/\n公网地址：http://$PUBLIC_IP:8002/ (若是云服务器请在服务器安全组放行端口 8000 8001 8002)。\n\n注册的第一个用户即是超级管理员，以后注册的用户都是普通用户。普通用户只能绑定设备和配置智能体; 超级管理员可以进行模型管理、用户管理、参数配置等功能。\n\n注册好后请按Enter键继续" 18 70
-SECRET_KEY=$(whiptail --title "配置服务器密钥" --inputbox "请使用超级管理员账号登录智控台\n内网地址：http://127.0.0.1:8002/\n公网地址：http://$PUBLIC_IP:8002/\n在顶部菜单 参数字典 → 参数管理 找到参数编码: server.secret (服务器密钥) \n复制该参数值并输入到下面输入框\n\n请输入密钥(留空则跳过配置):" 15 60 3>&1 1>&2 2>&3)
+PUBLIC_IP=$(get_public_ip)
+whiptail --title "配置服务器密钥" --msgbox "请使用浏览器，访问下方链接，打开智控台并注册账号: \
+
+内网地址：http://127.0.0.1:8002/ \
+
+公网地址：http://$PUBLIC_IP:8002/ (若是云服务器请在服务器安全组放行端口 8000 8001 8002)。\
+
+注册的第一个用户即是超级管理员，以后注册的用户都是普通用户。普通用户只能绑定设备和配置智能体; 超级管理员可以进行模型管理、用户管理、参数配置等功能。\
+
+注册好后请按Enter键继续" 18 70
+SECRET_KEY=$(whiptail --title "配置服务器密钥" --inputbox "请使用超级管理员账号登录智控台\n内网地址：http://127.0.0.1:8002/ \
+公网地址：http://$PUBLIC_IP:8002/\n在顶部菜单 参数字典 → 参数管理 找到参数编码: server.secret (服务器密钥) \
+复制该参数值并输入到下面输入框\n\n请输入密钥(留空则跳过配置):" 15 60 3>&1 1>&2 2>&3)
 
 if [ -n "$SECRET_KEY" ]; then
     python3 -c "
@@ -400,14 +492,13 @@ with open(config_path, 'w') as f:
     docker restart xiaozhi-esp32-server
 fi
 
-# 获取并显示地址信息
-LOCAL_IP=$(hostname -I | awk '{print $1}')
-
 # 修复日志文件获取不到ws的问题，改为硬编码
+# 复用之前获取的PUBLIC_IP变量，避免重复调用API
 whiptail --title "安装完成！" --msgbox "\
 服务端相关地址如下：\n\
-管理后台访问地址: http://$LOCAL_IP:8002\n\
-OTA 地址: http://$LOCAL_IP:8002/xiaozhi/ota/\n\
-视觉分析接口地址: http://$LOCAL_IP:8003/mcp/vision/explain\n\
-WebSocket 地址: ws://$LOCAL_IP:8000/xiaozhi/v1/\n\
-\n安装完毕！感谢您的使用！\n按Enter键退出..." 16 70
+公网地址:\n\
+管理后台: http://$PUBLIC_IP:8002\n\
+OTA: http://$PUBLIC_IP:8002/xiaozhi/ota/\n\
+视觉分析接口: http://$PUBLIC_IP:8003/mcp/vision/explain\n\
+WebSocket: ws://$PUBLIC_IP:8000/xiaozhi/v1/\n\
+\n安装完毕！感谢您的使用！\n按Enter键退出..." 20 70
